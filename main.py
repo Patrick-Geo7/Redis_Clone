@@ -1,20 +1,38 @@
 import sys
 
+def bulk__string(s):
+    """Return a RESP bulk string representation of the given string."""
+    return f"${len(s)}\r\n{s}\r\n"
+
 def handle_command(args):
+    HANDLERS = {
+        "ECHO": cmd_echo,
+        "PING": cmd_ping,
+    }
     """Process a Redis command and return the RESP response."""
     cmd = args[0].upper()
     args = args[1:]
-    if cmd == "PING":
-        # TODO: Return +PONG\r\n for no args
-        if not args:
-            return "+PONG\r\n"
-        # TODO: Return bulk string for PING <message>
-        else:   
-            message = args[0]
-        return f"${len(message)}\r\n{message}\r\n"
 
+    if cmd in HANDLERS:
+        return HANDLERS[cmd](args)
     return "-ERR unknown command\r\n"
+def cmd_echo(args):
+    """Handle the ECHO command."""
+    if len(args) < 1:
+        return "-ERR wrong number of arguments for 'ECHO' command\r\n"
+    message = args[0]
+    return bulk__string(message)
 
+def cmd_ping(args):
+    """Handle the PING command."""
+    if len(args) == 0:
+        return "+PONG\r\n"
+    elif len(args) == 1:
+        message = args[0]
+        return bulk__string(message)
+    else:
+        return "-ERR wrong number of arguments for 'PING' command\r\n"
+    
 def main():
     for line in sys.stdin:
         line = line.strip()
