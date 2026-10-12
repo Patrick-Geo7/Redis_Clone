@@ -3,11 +3,15 @@ import sys
 def handle_command(args):
     """Process a Redis command and return the RESP response."""
     cmd = args[0].upper()
-
+    args = args[1:]
     if cmd == "PING":
         # TODO: Return +PONG\r\n for no args
+        if not args:
+            return "+PONG\r\n"
         # TODO: Return bulk string for PING <message>
-        pass
+        else:   
+            message = args[0]
+        return f"${len(message)}\r\n{message}\r\n"
 
     return "-ERR unknown command\r\n"
 
