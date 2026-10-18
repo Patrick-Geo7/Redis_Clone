@@ -1,6 +1,17 @@
 from copy import error
 import sys
-
+# DEFINE RESP (REdis Serialization Protocol) response types
+ARITY = {
+    "ECHO": (1,1),
+    "PING": (0,1),
+    "COMMAND": (0,1),
+}
+def check_arity(command, args):
+    """Check if the number of arguments for a command is valid."""
+    min_args, max_args = ARITY.get(command.upper(), (0, 0))
+    if not (min_args <= len(args) <= max_args):
+        return False
+    return True
 def bulk__string(s):
     """Return a RESP bulk string representation of the given string."""
     if s is None:
@@ -25,6 +36,8 @@ def handle_command(args):
     cmd = args[0].upper()
     args = args[1:]
     handler = HANDLERS.get(cmd)
+    if handler is not None and not check_arity(cmd, args):
+        return error_string(f"ERR wrong number of arguments for '{cmd}' command")
     if handler is None:
         return error_string(f"ERR unknown command '{cmd}'")
     return handler(args)
