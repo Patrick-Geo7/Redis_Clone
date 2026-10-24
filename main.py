@@ -71,15 +71,34 @@ def cmd_docs(args):
     return f"+OK\r\n"
     return bulk__string(docs[command])
 def main():
-    for line in sys.stdin:
-        line = line.strip()
-        if not line:
-            continue
-        args = parse_args(line)
-        response = handle_command(args)
-        sys.stdout.write(response)
-        sys.stdout.flush()
-
+    """Main loop to read commands from stdin and write responses to stdout."""
+    args = parse_command(sys.stdin.buffer)
+    response = handle_command(args)
+    sys.stdout.write(response)
+    sys.stdout.flush()
+def read_line(stream):
+    buf = bytearray()
+    while True:
+       b = stream.read(1)
+       if b == b"\n" and buf.endswith(b"\r"):
+            return bytes(buf[:-1])
+       buf += b
+# SET foo bar becomes:
+# *3\r\n$3\r\nSET\r\n$3\r\nfoo\r\n$3\r\nbar\r\n
+def parse_command(stream):
+    """Parse a RESP command from the given stream."""
+    header = read_line(stream)
+    assert header[:1] == b"*", "Expected array of arguments"
+    n = int(header[1:])
+    args = []
+    for _ in range(n):
+            bulk_len_line = read_line(stream)
+            assert bulk_len_line[:1] == b"$", "Expected bulk string"
+            bulk_len = int(bulk_len_line[1:]) # b"$3" -> 3
+            arg = stream.read(bulk_len) # Read the argument, args are read using stream.read so they are bytes, not str
+            stream.read(2)  # skip CRLF
+            args.append(arg.decode('utf-8') )  # Exclude CRLF and decode
+    return args
 def parse_args(line):
     """Split a command line into arguments, handling quoted strings."""
     args = []
